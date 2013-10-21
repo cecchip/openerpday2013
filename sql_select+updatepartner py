@@ -1,0 +1,57 @@
+#!/usr/bin/python
+import psycopg2
+import psycopg2.extras
+import sys
+import time
+import config_psql as cp
+import pdb
+start = time.clock()
+def main():
+	#pdb.set_trace()
+	conn_string = "host=" + cp.host + " port=" + cp.port + " dbname=" + cp.dbname + " user=" + cp.user + " password="+ cp.password
+	try:
+		conn = psycopg2.connect(conn_string)
+		# print the connection string we will use to connect
+		print "Connecting to database\n	->%s" % (conn_string)
+	except:
+		print "Connection error to database\n	->%s" % (conn_string)
+		sys.exit()
+		
+	# psycopg2 creates a server-side cursor
+	cursor = conn.cursor("c_partner", cursor_factory=psycopg2.extras.DictCursor)
+	cursor.execute("SELECT id, name, email FROM res_partner WHERE (id>1 and customer) ORDER by name")
+	cursor2 = conn.cursor()   
+	row_count = 0
+	for row in cursor:
+		row_count += 1
+		pos = row[1].find(' ')
+		if pos < 5: pos = 5
+		namexxxx = row[1][:pos-4] + 'xxxx ' + row[1][pos+1:]
+		if row[2] > ' ':
+			if row[2].find('@'): pos = row[2].find('@')
+			if pos < 5: pos = 5
+			emailyyyy = row[2][:pos-4] + 'yyyy@' + row[2][pos+1:]
+			print "Pos. @ email", pos, emailyyyy, row[2][pos+1:],row[2][:pos-5] + 'yyyy@'
+		else:
+			emailyyyy = 'blank@yyyy'
+		update_line="UPDATE res_partner SET name = %s, email = %s where id = %s"
+		#update_line="UPDATE res_partner SET email=%s where id=%s"
+		try:
+			#print update_line
+			#print "Cursor_row:%s - Partner_id:%s - Name:%s - Email:%s" %(row_count, row[0], namexxxx, emailyyyy)
+			cursor2.execute(update_line, (namexxxx, emailyyyy, row[0])) # no % before
+			print "Total number of rows updated :", cursor2.rowcount
+		except Exception, e:
+			#pdb.set_trace()
+			print e
+			print e.pgcode
+			print e.pgerror
+			sys.exit()
+	cursor2.execute("COMMIT")	
+			
+		
+if __name__ == "__main__":
+	main()
+
+elapsed = (time.clock() - start)	
+print "End Update - Time:%s" %(elapsed)
